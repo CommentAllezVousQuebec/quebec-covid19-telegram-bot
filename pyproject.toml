@@ -1,0 +1,14 @@
+[tool.poetry]
+name = 'quebec-covid-telegram-bot'
+description = ''
+version = '1.0.0'
+readme = ''
+repository = 'https://github.com/CommentAllezVousQuebec/quebec-covid19-telegram-bot'
+homepage = 'https://github.com/CommentAllezVousQuebec/quebec-covid19-telegram-bot'
+authors = [
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+elasticsearch = '*'
+python-telegram-bot = '*'
