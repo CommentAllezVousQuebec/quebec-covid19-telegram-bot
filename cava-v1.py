@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
 from datetime import datetime
+from typing import Dict
+
 from elasticsearch import Elasticsearch
+from telegram import ReplyKeyboardMarkup
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
+                          ConversationHandler)
 
 es = Elasticsearch(
     cloud_id="commentallezvous:bm9ydGhhbWVyaWNhLW5vcnRoZWFzdDEuZ2NwLmVsYXN0aWMtY2xvdWQuY29tJDEzYjc5N2YxMjUzOTQ5MWM4YzlmZGM2Yzk2OTBmNTc1JDhkMjQ3NWY1NTM3YzRjZDk4NWZiNTExOTUxZGI1MzQ2",
@@ -10,54 +16,50 @@ es = Elasticsearch(
 )
 
 doc = {
-    'author': 'kimchy',
-    'text': 'Elasticsearch: cool. bonsai cool.',
+    'author':    'kimchy',
+    'text':      'Elasticsearch: cool. bonsai cool.',
     'timestamp': datetime.now(),
 }
-
-
-
-import logging
-
-from telegram import ReplyKeyboardMarkup
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
-                          ConversationHandler)
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
-logger = logging.getLogger(__name__)
-
 CHOOSING, TYPING_REPLY, TYPING_CHOICE = range(3)
 
-reply_keyboard = [['Humeur', 'Besoin'],
-                  ['Température', 'Symptôme'],
-                  ['Terminer']]
+reply_keyboard = [
+    ['Humeur', 'Besoin'],
+    ['Température', 'Symptôme'],
+    ['Terminer']
+]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 
-reply_keyboard1 = [['Toux'],
-                  ['Grande fatigue'],
-                  ['Difficulté respiratoire']]
+reply_keyboard1 = [
+    ['Toux'],
+    ['Grande fatigue'],
+    ['Difficulté respiratoire']
+]
 markup1 = ReplyKeyboardMarkup(reply_keyboard1, one_time_keyboard=True)
 
 
 def facts_to_str(user_data):
-    facts = list()
+    facts = []
 
     for key, value in user_data.items():
-        facts.append('{} - {}'.format(key, value))
+        facts.append(f'{key} - {value}')
 
     return "\n".join(facts).join(['\n', '\n'])
 
 
-def start(update, context):
-    context.user_data['Prénom'] = 'François'
-    context.user_data['Téléphone'] = '+1-418-999-9999'
-    context.user_data['Age'] = '50+'
-    context.user_data['Statut'] = 'revient de voyage'
+def start(update, context: Dict):
+    context.update({
+        'Prénom': 'François',
+        'Téléphone': '+1-418-999-9999',
+        'Age': '50+',
+        'Statut': 'revient de voyage',
+    })
     update.message.reply_text("Monsieur François, 50+, revient de voyage\n+1-418-999-9999",
-        reply_markup=markup)
+                              reply_markup=markup)
 
     return CHOOSING
 
@@ -65,8 +67,7 @@ def start(update, context):
 def regular_choice(update, context):
     text = update.message.text
     context.user_data['choice'] = text
-    update.message.reply_text(
-        'Réponses obtenues : {}? '.format(text.lower()))
+    update.message.reply_text(f'Réponses obtenues : {text.lower()}? ')
 
     return TYPING_REPLY
 
@@ -84,8 +85,7 @@ def received_information(update, context):
     user_data[category] = text
     del user_data['choice']
 
-    update.message.reply_text("Les réponses:"
-                              "{}".format(facts_to_str(user_data)),
+    update.message.reply_text(f"Les réponses:{facts_to_str(user_data)}",
                               reply_markup=markup)
 
     return CHOOSING
@@ -96,17 +96,16 @@ def done(update, context):
     if 'choice' in user_data:
         del user_data['choice']
 
-    update.message.reply_text("Les réponses finales obtenues:"
-                              "{}".format(facts_to_str(user_data)))
+    update.message.reply_text(f"Les réponses finales obtenues:{facts_to_str(user_data)}")
 
-    logger.warning('Update "%s" user_data "%s"', update, context.user_data)
+    logging.warning(f'Update "{update}" user_data "{context.user_data}"')
 
-    #'timestamp': datetime.now()
+    # 'timestamp': datetime.now()
 
-    doc  = context.user_data
-    doc['timestamp'] = datetime.now()
+    document = context.user_data
+    document['timestamp'] = datetime.now()
 
-    res = es.index(index="test-index", body=doc)
+    res = es.index(index="test-index", body=document)
     print(res['result'])
 
     user_data.clear()
@@ -115,7 +114,7 @@ def done(update, context):
 
 def error(update, context):
     """Log Errors caused by Updates."""
-    logger.warning('Update "%s" caused error "%s"', update, context.error)
+    logging.warning(f'Update "{update}" caused error "{context.error}"')
 
 
 def main():
@@ -125,36 +124,30 @@ def main():
     updater = Updater("1030659168:AAFEhWhl7AYQo1p59KcaSM4NmVaeTn8PONM", use_context=True)
 
     # Get the dispatcher to register handlers
-    dp = updater.dispatcher
+    dispatcher = updater.dispatcher
 
     # Add conversation handler with the states CHOOSING, TYPING_CHOICE and TYPING_REPLY
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-
-        states={
-            CHOOSING: [MessageHandler(Filters.regex('^(Humeur|Besoin|Température)$'),
-                                      regular_choice),
-                       MessageHandler(Filters.regex('^Symptôme$'),
-                                      custom_choice)
-                       ],
-
-
-            TYPING_CHOICE: [MessageHandler(Filters.text,
-                                           regular_choice)
-                            ],
-
-            TYPING_REPLY: [MessageHandler(Filters.text,
-                                          received_information),
-                           ],
-        },
-
-        fallbacks=[MessageHandler(Filters.regex('^Terminer$'), done)]
+    dispatcher.add_handler(
+        ConversationHandler(
+            entry_points=[CommandHandler('start', start)],
+            states={
+                CHOOSING:      [
+                    MessageHandler(Filters.regex('^(Humeur|Besoin|Température)$'), regular_choice),
+                    MessageHandler(Filters.regex('^Symptôme$'), custom_choice)
+                ],
+                TYPING_CHOICE: [
+                    MessageHandler(Filters.text, regular_choice)
+                ],
+                TYPING_REPLY:  [
+                    MessageHandler(Filters.text, received_information),
+                ],
+            },
+            fallbacks=[MessageHandler(Filters.regex('^Terminer$'), done)]
+        )
     )
 
-    dp.add_handler(conv_handler)
-
     # log all errors
-    dp.add_error_handler(error)
+    dispatcher.add_error_handler(error)
 
     # Start the Bot
     updater.start_polling()
@@ -165,5 +158,5 @@ def main():
     updater.idle()
 
 
-if __name__ == '__main__': 
+if __name__ == '__main__':
     main()
