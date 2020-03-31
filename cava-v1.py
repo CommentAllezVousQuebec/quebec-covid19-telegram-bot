@@ -5,8 +5,8 @@ from datetime import datetime
 from elasticsearch import Elasticsearch
 
 es = Elasticsearch(
-    cloud_id="commentallezvous:bm9ydGhhbWVyaWNhLW5vcnRoZWFzdDEuZ2NwLmVsYXN0aWMtY2xvdWQuY29tJDEzYjc5N2YxMjUzOTQ5MWM4YzlmZGM2Yzk2OTBmNTc1JDhkMjQ3NWY1NTM3YzRjZDk4NWZiNTExOTUxZGI1MzQ2",
-    http_auth=("elastic", "1EozbFBlK46bqpaJ1ZOzbelo"),
+    cloud_id="commentallezvous:888888888888888888888",
+    http_auth=("elastic", "8888888888888"),
 )
 
 doc = {
@@ -122,7 +122,7 @@ def main():
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
     # Post version 12 this will no longer be necessary
-    updater = Updater("1030659168:AAFEhWhl7AYQo1p59KcaSM4NmVaeTn8PONM", use_context=True)
+    updater = Updater("88888888888888:888888888888888", use_context=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
